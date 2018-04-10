@@ -1,10 +1,8 @@
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics.regression import mean_absolute_error
-
-# from dbn.tensorflow import SupervisedDBNClassification
 from dbn import SupervisedDBNRegression
+np.random.seed(2018)
 
 dataset = pd.read_csv("data/idraud.csv")
 
@@ -55,9 +53,42 @@ regressor.fit(X_train, y_train)
 # Save the model
 regressor.save('model.pkl')
 
+# prediction
+y_pred = regressor.predict(X_test)
+
 # Restore it
 regressor = SupervisedDBNRegression.load('model.pkl')
 
+y_test_transform = scaler.inverse_transform(y_test)
+y_pred_transform = scaler.inverse_transform(y_pred)
+
+
+def dstat_measure(targets, predictions):
+    n = len(targets)
+    alpha = 0
+    for i in range(n-1):
+        if ((predictions[i + 1] - targets[i]) * (targets[i + 1] - targets[i]))>0:
+            alpha += 1
+    dstat = (1/n)*alpha*100
+    return dstat
+
+
+def mean_absolute_error(targets, predictions):
+    return np.mean(np.abs(targets-predictions))
+
+
+def mean_absolute_percentage_error(targets, predictions):
+    return np.mean(np.abs((targets - predictions) / targets)) * 100
+
+
+def root_mean_square_error(targets, predictions):
+    return np.sqrt(np.mean((targets-predictions) ** 2))
+
+
 # Test
-y_pred = regressor.predict(X_test)
-print('Done.\nMAE: %f' % mean_absolute_error(y_test, y_pred))
+print('Done.\nMAE: %f' % mean_absolute_error(y_test_transform,
+                                             y_pred_transform))
+print("MAPE: %f" % mean_absolute_percentage_error(y_test_transform,
+                                                  y_pred_transform))
+print("RMSE: %f" % root_mean_square_error(y_test_transform, y_pred_transform))
+print("Dstat: %f" % dstat_measure(y_test, y_pred_transform))
