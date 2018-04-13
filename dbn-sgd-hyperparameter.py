@@ -33,7 +33,7 @@ for i in [ 4,8,12,16,20 ]:
 input_size_varian = [3,4,5,6,7]
 iteration_rbm = [30]
 string_output_varian = ''
-lr = [0,003]
+lr = [0.003]
 split_size = [80, 85, 100]
 
 hype_parameter_result = []
