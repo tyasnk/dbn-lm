@@ -468,7 +468,7 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
 
     def _levenberg_marquardt(self, _data, _labels):
         """
-        Performs stochastic gradient descend optimization algorithm.
+        Performs levenberg-marquardt optimization algorithm.
         :param _data: array-like, shape = (n_samples, n_features)
         :param _labels: array-like, shape = (n_samples, targets)
         :return:
