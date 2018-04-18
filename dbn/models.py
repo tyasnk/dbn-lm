@@ -496,13 +496,13 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
             labels = _labels[idx]
             i = 0
             for batch_data, batch_labels in batch_generator(self.batch_size, data, labels):
-                t += 1
                 # Clear arrays
                 for arr1, arr2 in zip(accum_delta_W, accum_delta_bias):
                     arr1[:], arr2[:] = .0, .0
                 for sample, label in zip(batch_data, batch_labels):
                     delta_W, delta_bias, predicted = self._backpropagation(sample, label)
                     for layer in range(len(self.unsupervised_dbn.rbm_layers) + 1):
+                        t += 1
                         g = delta_W[layer]
                         g_hat = (delta_W[layer])**2
 

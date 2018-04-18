@@ -16,7 +16,7 @@ train = df[0:len_train]
 validation = df[len_train:len_train+len_val]
 test = df[len_train+len_val:]
 
-scaler = MinMaxScaler(feature_range=(-1, 1)).fit(train)
+scaler = MinMaxScaler(feature_range=(0, 1)).fit(train)
 train = scaler.transform(train)
 validation = scaler.transform(validation)
 test = scaler.transform(test)
@@ -42,7 +42,7 @@ X_test, y_test = create_sliding_windows(test, lag)
 # Training
 regressor = SupervisedDBNRegression(hidden_layers_structure=[30, 40],
                                     learning_rate_rbm=0.001,
-                                    learning_rate=0.001,
+                                    learning_rate=0.0001,
                                     n_epochs_rbm=30,
                                     n_iter_backprop=100,
                                     batch_size=32,
