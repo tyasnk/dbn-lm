@@ -47,7 +47,8 @@ regressor = SupervisedDBNRegression(hidden_layers_structure=[30, 40],
                                     n_iter_backprop=100,
                                     batch_size=32,
                                     activation_function='relu',
-                                    dropout_p=0.2)
+                                    dropout_p=0.2,
+                                    train_optimization_algorithm='adam')
 regressor.fit(X_train, y_train)
 
 # Save the model

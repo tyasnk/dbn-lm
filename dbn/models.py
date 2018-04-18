@@ -386,8 +386,9 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, **kwargs):
+    def __init__(self, train_optimization_algorithm, **kwargs):
         super(NumPyAbstractSupervisedDBN, self).__init__(UnsupervisedDBN, **kwargs)
+        self.train_optimization_algorithm = train_optimization_algorithm
 
     def _compute_activations(self, sample):
         """
@@ -466,18 +467,21 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
                 error = np.mean(np.sum(matrix_error, 1))
                 print(">> Epoch %d finished \tANN training loss %f" % (iteration, error))
 
-    def _levenberg_marquardt(self, _data, _labels):
+    def _adam(self, _data, _labels, beta1 = 0.9, beta2=0.999, epsilon = 1e-8):
         """
-        Performs levenberg-marquardt optimization algorithm.
+        Performs adam optimization algorithm.
         :param _data: array-like, shape = (n_samples, n_features)
         :param _labels: array-like, shape = (n_samples, targets)
         :return:
         """
+        m = {}
+        for i in range(len(self.unsupervised_dbn.rbm_layers) + 1):
+            m[i] = 0
+        v = {}
+        for j in range(len(self.unsupervised_dbn.rbm_layers) + 1):
+            v[j] = 0
 
-        def compute_jacobian_matrix(matrix):
-            jacobian_matrix = np.diagflat(matrix) - np.dot(matrix, matrix.T)
-            return jacobian_matrix
-
+        t = 0
         if self.verbose:
             matrix_error = np.zeros([len(_data), self.num_classes])
         num_samples = len(_data)
@@ -492,14 +496,28 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
             labels = _labels[idx]
             i = 0
             for batch_data, batch_labels in batch_generator(self.batch_size, data, labels):
+                t += 1
                 # Clear arrays
                 for arr1, arr2 in zip(accum_delta_W, accum_delta_bias):
                     arr1[:], arr2[:] = .0, .0
                 for sample, label in zip(batch_data, batch_labels):
                     delta_W, delta_bias, predicted = self._backpropagation(sample, label)
                     for layer in range(len(self.unsupervised_dbn.rbm_layers) + 1):
-                        accum_delta_W[layer] += delta_W[layer]
+                        g = delta_W[layer]
+                        g_hat = (delta_W[layer])**2
+
+                        m[layer] = m[layer] * beta1 + (1 - beta1) * g
+                        v[layer] = v[layer] * beta2 + (1 - beta2) * g_hat
+
+                        m_corrected = m[layer] / (1 - (beta1 ** t))
+                        v_corrected = v[layer] / (1 - (beta2 ** t))
+
+                        delta_weight = m_corrected / (
+                                    np.sqrt(v_corrected) + epsilon)
+
+                        accum_delta_W[layer] += delta_weight
                         accum_delta_bias[layer] += delta_bias[layer]
+
                     if self.verbose:
                         loss = self._compute_loss(predicted, label)
                         matrix_error[i, :] = loss
@@ -507,10 +525,21 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
 
                 layer = 0
                 for rbm in self.unsupervised_dbn.rbm_layers:
-                    J = compute_jacobian_matrix(accum_delta_W[layer])
-                    w_delta = (np.matmul(J.T, J) + (self.learning_rate * np.eye(len(J))))**-1
+                    # Updating parameters of hidden layers
+                    rbm.W = (1 - (
+                        self.learning_rate * self.l2_regularization) / num_samples) * rbm.W - self.learning_rate * (
+                        accum_delta_W[layer] / self.batch_size)
+                    rbm.c -= self.learning_rate * (accum_delta_bias[layer] / self.batch_size)
+                    layer += 1
 
+                self.W = (1 - (
+                    self.learning_rate * self.l2_regularization) / num_samples) * self.W - self.learning_rate * (
+                    accum_delta_W[layer] / self.batch_size)
+                self.b -= self.learning_rate * (accum_delta_bias[layer] / self.batch_size)
 
+            if self.verbose:
+                error = np.mean(np.sum(matrix_error, 1))
+                print(">> Epoch %d finished \tANN training loss %f" % (iteration, error))
 
     def _backpropagation(self, input_vector, label):
         """
@@ -581,8 +610,10 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
         if self.verbose:
             print("[START] Fine tuning step:")
 
-        if self.unsupervised_dbn.optimization_algorithm == 'sgd':
+        if self.train_optimization_algorithm == 'sgd':
             self._stochastic_gradient_descent(data, labels)
+        elif self.train_optimization_algorithm == 'adam':
+            self._adam(data, labels)
         else:
             raise ValueError("Invalid optimization algorithm.")
 
@@ -728,7 +759,6 @@ class SupervisedDBNRegression(NumPyAbstractSupervisedDBN, RegressorMixin):
     """
     This class implements a Deep Belief Network for regression problems.
     """
-
     def _transform_labels_to_network_format(self, labels):
         """
         Returns the same labels since regression case does not need to convert anything.
