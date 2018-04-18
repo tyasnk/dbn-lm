@@ -41,8 +41,9 @@ X_test, y_test = create_sliding_windows(test, lag)
 
 # Training
 regressor = SupervisedDBNRegression(hidden_layers_structure=[30, 40],
+                                    optimization_algorithm='sgd',
                                     learning_rate_rbm=0.001,
-                                    learning_rate=0.0001,
+                                    learning_rate=0.001,
                                     n_epochs_rbm=30,
                                     n_iter_backprop=100,
                                     batch_size=32,

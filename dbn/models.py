@@ -70,6 +70,8 @@ class BinaryRBM(BaseEstimator, TransformerMixin, BaseModel):
 
         if self.optimization_algorithm == 'sgd':
             self._stochastic_gradient_descent(X)
+        elif self.optimization_algorithm == 'adam':
+            self._adam(X)
         else:
             raise ValueError("Invalid optimization algorithm.")
         return self
@@ -112,6 +114,51 @@ class BinaryRBM(BaseEstimator, TransformerMixin, BaseModel):
                 for sample in batch:
                     delta_W, delta_b, delta_c = self._contrastive_divergence(sample)
                     accum_delta_W += delta_W
+                    accum_delta_b += delta_b
+                    accum_delta_c += delta_c
+                self.W += self.learning_rate * (accum_delta_W / self.batch_size)
+                self.b += self.learning_rate * (accum_delta_b / self.batch_size)
+                self.c += self.learning_rate * (accum_delta_c / self.batch_size)
+            if self.verbose:
+                error = self._compute_reconstruction_error(data)
+                print(">> Epoch %d finished \tRBM Reconstruction error %f" % (iteration, error))
+
+    def _adam(self, _data, beta1 = 0.9, beta2=0.999, epsilon = 1e-8):
+        """
+        Performs adam optimization algorithm.
+        :param _data: array-like, shape = (n_samples, n_features)
+        :return:
+        """
+        m = 0
+        v = 0
+        t = 0
+
+        accum_delta_W = np.zeros(self.W.shape)
+        accum_delta_b = np.zeros(self.b.shape)
+        accum_delta_c = np.zeros(self.c.shape)
+        for iteration in range(1, self.n_epochs + 1):
+            idx = np.random.permutation(len(_data))
+            data = _data[idx]
+            for batch in batch_generator(self.batch_size, data):
+                accum_delta_W[:] = .0
+                accum_delta_b[:] = .0
+                accum_delta_c[:] = .0
+                for sample in batch:
+                    delta_W, delta_b, delta_c = self._contrastive_divergence(sample)
+                    t += 1
+                    g = delta_W
+                    g_hat = delta_W ** 2
+
+                    m = m * beta1 + (1 - beta1) * g
+                    v = v * beta2 + (1 - beta2) * g_hat
+
+                    m_corrected = m / (1 - (beta1 ** t))
+                    v_corrected = v / (1 - (beta2 ** t))
+
+                    delta_weight = m_corrected / (
+                            np.sqrt(v_corrected) + epsilon)
+
+                    accum_delta_W += delta_weight
                     accum_delta_b += delta_b
                     accum_delta_c += delta_c
                 self.W += self.learning_rate * (accum_delta_W / self.batch_size)
@@ -373,6 +420,10 @@ class AbstractSupervisedDBN(BaseEstimator, BaseModel):
 
     @abstractmethod
     def _stochastic_gradient_descent(self, data, labels):
+        return
+
+    @abstractmethod
+    def _adam(self, data, labels):
         return
 
     @abstractmethod
