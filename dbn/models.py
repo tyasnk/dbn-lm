@@ -548,8 +548,8 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
             self.validation_loss.append(validation_loss)
 
             if self.verbose:
-                print(">> Epoch %d finished \tANN training loss %f" % (
-                    iteration, error
+                print(">> Epoch %d finished \tANN training loss %f \tANN validation loss %f" % (
+                    iteration, error, validation_loss
                 ))
 
     def _adam(self, _data, _labels, valid_data=None, valid_labels=None,
@@ -635,8 +635,8 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
             self.validation_loss.append(validation_loss)
 
             if self.verbose:
-                print(">> Epoch %d finished \tANN training loss %f" % (
-                    iteration, error
+                print(">> Epoch %d finished \tANN training loss %f \tANN validation loss %f" % (
+                    iteration, error, validation_loss
                 ))
 
     def _backpropagation(self, input_vector, label):
