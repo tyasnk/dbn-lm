@@ -382,6 +382,19 @@ class AbstractSupervisedDBN(BaseEstimator, BaseModel):
         self._fine_tuning(X, y)
         return self
 
+    def fit_and_validate(self, X, y=None, X_valid=None, y_valid=None, pre_train=True):
+        """
+        Fits a model given data.
+        :param X: array-like, shape = (n_samples, n_features)
+        :param y : array-like, shape = (n_samples, )
+        :param pre_train: bool
+        :return:
+        """
+        if pre_train:
+            self.pre_train(X)
+        self._fine_tuning_with_validation(X, y, X_valid, y_valid)
+        return self
+
     def predict(self, X):
         """
         Predicts the target given data.
@@ -419,15 +432,20 @@ class AbstractSupervisedDBN(BaseEstimator, BaseModel):
         return
 
     @abstractmethod
-    def _stochastic_gradient_descent(self, data, labels):
+    def _stochastic_gradient_descent(self, data, labels, valid_data = None,
+                                     valid_labels = None):
         return
 
     @abstractmethod
-    def _adam(self, data, labels):
+    def _adam(self, data, labels, valid_data=None, valid_labels=None):
         return
 
     @abstractmethod
     def _fine_tuning(self, data, _labels):
+        return
+
+    @abstractmethod
+    def _fine_tuning_with_validation(self, data, _labels, valid_data, valid_labels):
         return
 
 
@@ -440,6 +458,8 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
     def __init__(self, train_optimization_algorithm, **kwargs):
         super(NumPyAbstractSupervisedDBN, self).__init__(UnsupervisedDBN, **kwargs)
         self.train_optimization_algorithm = train_optimization_algorithm
+        self.train_loss = []
+        self.validation_loss = []
 
     def _compute_activations(self, sample):
         """
@@ -466,15 +486,16 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
 
         return layers_activation
 
-    def _stochastic_gradient_descent(self, _data, _labels):
+    def _stochastic_gradient_descent(self, _data, _labels, valid_data=None,
+                                     valid_labels=None):
         """
         Performs stochastic gradient descend optimization algorithm.
         :param _data: array-like, shape = (n_samples, n_features)
         :param _labels: array-like, shape = (n_samples, targets)
         :return:
         """
-        if self.verbose:
-            matrix_error = np.zeros([len(_data), self.num_classes])
+        matrix_error = np.zeros([len(_data), self.num_classes])
+
         num_samples = len(_data)
         accum_delta_W = [np.zeros(rbm.W.shape) for rbm in self.unsupervised_dbn.rbm_layers]
         accum_delta_W.append(np.zeros(self.W.shape))
@@ -495,10 +516,10 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
                     for layer in range(len(self.unsupervised_dbn.rbm_layers) + 1):
                         accum_delta_W[layer] += delta_W[layer]
                         accum_delta_bias[layer] += delta_bias[layer]
-                    if self.verbose:
-                        loss = self._compute_loss(predicted, label)
-                        matrix_error[i, :] = loss
-                        i += 1
+
+                    loss = self._compute_loss(predicted, label)
+                    matrix_error[i, :] = loss
+                    i += 1
 
                 layer = 0
                 for rbm in self.unsupervised_dbn.rbm_layers:
@@ -514,11 +535,25 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
                     accum_delta_W[layer] / self.batch_size)
                 self.b -= self.learning_rate * (accum_delta_bias[layer] / self.batch_size)
 
-            if self.verbose:
-                error = np.mean(np.sum(matrix_error, 1))
-                print(">> Epoch %d finished \tANN training loss %f" % (iteration, error))
+            error = np.mean(np.sum(matrix_error, 1))
+            self.train_loss.append(error)
 
-    def _adam(self, _data, _labels, beta1 = 0.9, beta2=0.999, epsilon = 1e-8):
+            if len(valid_data.shape) == 1:  # It is a single sample
+                valid_data = np.expand_dims(valid_data, 0)
+            transformed_data = self.transform(valid_data)
+            predicted_data = self._compute_output_units_matrix(
+                transformed_data)
+            validation_loss = np.square(
+                np.subtract(valid_labels, predicted_data)).mean()
+            self.validation_loss.append(validation_loss)
+
+            if self.verbose:
+                print(">> Epoch %d finished \tANN training loss %f" % (
+                    iteration, error
+                ))
+
+    def _adam(self, _data, _labels, valid_data=None, valid_labels=None,
+              beta1 = 0.9, beta2=0.999, epsilon = 1e-8):
         """
         Performs adam optimization algorithm.
         :param _data: array-like, shape = (n_samples, n_features)
@@ -531,10 +566,10 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
         v = {}
         for j in range(len(self.unsupervised_dbn.rbm_layers) + 1):
             v[j] = 0
-
         t = 0
-        if self.verbose:
-            matrix_error = np.zeros([len(_data), self.num_classes])
+
+        matrix_error = np.zeros([len(_data), self.num_classes])
+
         num_samples = len(_data)
         accum_delta_W = [np.zeros(rbm.W.shape) for rbm in self.unsupervised_dbn.rbm_layers]
         accum_delta_W.append(np.zeros(self.W.shape))
@@ -551,9 +586,9 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
                 for arr1, arr2 in zip(accum_delta_W, accum_delta_bias):
                     arr1[:], arr2[:] = .0, .0
                 for sample, label in zip(batch_data, batch_labels):
+                    t += 1
                     delta_W, delta_bias, predicted = self._backpropagation(sample, label)
                     for layer in range(len(self.unsupervised_dbn.rbm_layers) + 1):
-                        t += 1
                         g = delta_W[layer]
                         g_hat = (delta_W[layer])**2
 
@@ -569,10 +604,9 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
                         accum_delta_W[layer] += delta_weight
                         accum_delta_bias[layer] += delta_bias[layer]
 
-                    if self.verbose:
-                        loss = self._compute_loss(predicted, label)
-                        matrix_error[i, :] = loss
-                        i += 1
+                    loss = self._compute_loss(predicted, label)
+                    matrix_error[i, :] = loss
+                    i += 1
 
                 layer = 0
                 for rbm in self.unsupervised_dbn.rbm_layers:
@@ -588,9 +622,22 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
                     accum_delta_W[layer] / self.batch_size)
                 self.b -= self.learning_rate * (accum_delta_bias[layer] / self.batch_size)
 
+            error = np.mean(np.sum(matrix_error, 1))
+            self.train_loss.append(error)
+
+            if len(valid_data.shape) == 1:  # It is a single sample
+                valid_data = np.expand_dims(valid_data, 0)
+            transformed_data = self.transform(valid_data)
+            predicted_data = self._compute_output_units_matrix(
+                transformed_data)
+            validation_loss = np.square(
+                np.subtract(valid_labels, predicted_data)).mean()
+            self.validation_loss.append(validation_loss)
+
             if self.verbose:
-                error = np.mean(np.sum(matrix_error, 1))
-                print(">> Epoch %d finished \tANN training loss %f" % (iteration, error))
+                print(">> Epoch %d finished \tANN training loss %f" % (
+                    iteration, error
+                ))
 
     def _backpropagation(self, input_vector, label):
         """
@@ -665,6 +712,44 @@ class NumPyAbstractSupervisedDBN(AbstractSupervisedDBN):
             self._stochastic_gradient_descent(data, labels)
         elif self.train_optimization_algorithm == 'adam':
             self._adam(data, labels)
+        else:
+            raise ValueError("Invalid optimization algorithm.")
+
+        # Scaling down weights obtained from pretraining
+        for rbm in self.unsupervised_dbn.rbm_layers:
+            rbm.W *= self.p
+            rbm.c *= self.p
+
+        if self.verbose:
+            print("[END] Fine tuning step")
+
+    def _fine_tuning_with_validation(self, data, _labels, valid_data, valid_labels):
+        """
+        Entry point of the fine tuning procedure.
+        :param data: array-like, shape = (n_samples, n_features)
+        :param _labels: array-like, shape = (n_samples, targets)
+        :return:
+        """
+        self.num_classes = self._determine_num_output_neurons(_labels)
+        n_hidden_units_previous_layer = self.unsupervised_dbn.rbm_layers[-1].n_hidden_units
+        self.W = np.random.randn(self.num_classes, n_hidden_units_previous_layer) / np.sqrt(
+            n_hidden_units_previous_layer)
+        self.b = np.random.randn(self.num_classes) / np.sqrt(n_hidden_units_previous_layer)
+
+        labels = self._transform_labels_to_network_format(_labels)
+
+        # Scaling up weights obtained from pretraining
+        for rbm in self.unsupervised_dbn.rbm_layers:
+            rbm.W /= self.p
+            rbm.c /= self.p
+
+        if self.verbose:
+            print("[START] Fine tuning step:")
+
+        if self.train_optimization_algorithm == 'sgd':
+            self._stochastic_gradient_descent(data, labels, valid_data, valid_labels)
+        elif self.train_optimization_algorithm == 'adam':
+            self._adam(data, labels, valid_data, valid_labels)
         else:
             raise ValueError("Invalid optimization algorithm.")
 
