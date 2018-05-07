@@ -36,9 +36,9 @@ if __name__ == "__main__":
     print ('a')
 
     rate = []
-    name = "idraud"
+    name = "idrusd"
     file_name = "dataset/" + name + ".csv"
-    kurs = "IDR/AUD"
+    kurs = "IDR/USD"
 
     rate = open_file(file_name, kurs)
     input_size = 4
