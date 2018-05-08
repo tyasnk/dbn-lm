@@ -54,8 +54,8 @@ partition = 10
 for i in range(0, partition):
     lr_varians.append(min_lr + (max_lr * i / partition))
 
-#lr_varians = [0.008,0.005, 0.003,0.01, 0.02, 0.03,0.1]#
-lr_varians = [0.1]#
+lr_varians = [0.008,0.005, 0.003,0.01, 0.02, 0.03,0.1]
+lr_varians = []
 
 print (lr_varians)
 
