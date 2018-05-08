@@ -65,8 +65,8 @@ def normalize(x, y=None, params=None):
     thisparams = []
 
     if params is None:
-        for i in xrange(0, len(x)):
-            for j in xrange(0, len(x[i])):
+        for i in range(0, len(x)):
+            for j in range(0, len(x[i])):
                 returnI = float(x[i][j])
                 if returnI > returnMax:
                     returnMax = returnI
@@ -89,9 +89,9 @@ def normalize(x, y=None, params=None):
         thisparams.append(returnMax)
 
     if params is None:
-        for i in xrange(0, len(x)):
+        for i in range(0, len(x)):
             itemxnormalize = []
-            for j in xrange(0, len(x[i])):
+            for j in range(0, len(x[i])):
                 floatIx = float(x[i][j])
                 normalizex = (floatIx - returnMin) / (returnMax - returnMin)
                 itemxnormalize.append(normalizex)
@@ -102,9 +102,9 @@ def normalize(x, y=None, params=None):
             ynormalize.append([normalizey])
         return xnormalize, ynormalize, thisparams
     else:
-        for i in xrange(0, len(x)):
+        for i in range(0, len(x)):
             itemxnormalize = []
-            for j in xrange(0, len(x[i])):
+            for j in range(0, len(x[i])):
                 floatIx = float(x[i][j])
                 normalizex = (floatIx - returnMin) / (returnMax - returnMin);
                 itemxnormalize.append(normalizex)
@@ -120,7 +120,7 @@ def renormalize(y, params_norm):
     returnMin = params_norm[0]
     returnMax = params_norm[1]
 
-    for i in xrange(len(y)):
+    for i in range(len(y)):
         renormalize = y[i] * (returnMax - returnMin) + returnMin
         yrenormalize.append(renormalize)
     return yrenormalize
@@ -135,12 +135,12 @@ def split_data(rate, sw, size_split):
     testStart = dataSize * size_split[1] / 100 + sw
     testEnd = dataSize
 
-    print trainStart
-    print trainEnd
-    print validStart
-    print validEnd
-    print testStart
-    print testEnd
+    print (trainStart)
+    print (trainEnd)
+    print (validStart)
+    print (validEnd)
+    print (testStart)
+    print (testEnd)
 
     sliding_window = sw
 
@@ -151,28 +151,29 @@ def split_data(rate, sw, size_split):
     testRealX = []
     testRealY = []
 
-    for i in xrange(trainStart, trainEnd):
+
+    for i in range(int(trainStart), int(trainEnd)):
         if i > sw:
             dataNX = []
-            for j in xrange(i - sliding_window, i):
+            for j in range(i - sliding_window, i):
                 dataNX.append(float(rate[j]))
             trainRealX.append(dataNX)
             dataNY = []
             dataNY.append(float(rate[i]))
             trainRealY.append(dataNY)
 
-    for i in xrange(validStart, validEnd):
+    for i in range(int(validStart), int(validEnd)):
         datai = []
-        for j in xrange(i - sliding_window, i):
+        for j in range(i - sliding_window, i):
             datai.append(float(rate[j]))
         validRealX.append(datai)
         dataiy = []
         dataiy.append(float(rate[i]))
         validRealY.append(dataiy)
 
-    for i in xrange(testStart, testEnd):
+    for i in range(int(testStart), int(testEnd)):
         datai = []
-        for j in xrange(i - sliding_window, i):
+        for j in range(i - sliding_window, i):
             datai.append(float(rate[j]))
         testRealX.append(datai)
         dataiy = []
@@ -203,7 +204,7 @@ def mape(y_true, y_pred, n):
 def da(x_true, y_true, y_pred):
     N = len(y_true)
     sigmaAlphaT = 0
-    for i in xrange(0, N):
+    for i in range(0, N):
         if ((y_pred[i] - x_true[i][-1]) * (y_true[i][0] - x_true[i][-1])) > 0:
             sigmaAlphaT += 1
     da = (1 / float(N)) * float(sigmaAlphaT) * 100
@@ -221,14 +222,14 @@ class result:
 
 def find_best_input(hype_parameter_result, input_size_varian):
     array_average = []
-    for i in xrange(len(input_size_varian)):
+    for i in range(len(input_size_varian)):
         array_da_result_input = []
-        for j in xrange(len(hype_parameter_result)):
+        for j in range(len(hype_parameter_result)):
             if (hype_parameter_result[j].input_node == input_size_varian[i]):
                 array_da_result_input.append(hype_parameter_result[j].directional_accuracy)
         average = np.average(array_da_result_input)
-        print average
-        print len(array_da_result_input)
+        print (average)
+        print (len(array_da_result_input))
         array_average.append(average)
 
     best_input_accuracy = np.max(array_average)
@@ -241,12 +242,12 @@ def find_best_input(hype_parameter_result, input_size_varian):
 
 def find_best_hidden(hype_parameter_result, best_input, rbm_node_size_varian):
     best_input_parameter_result = []
-    for i in xrange(len(hype_parameter_result)):
+    for i in range(len(hype_parameter_result)):
         if hype_parameter_result[i].input_node == best_input:
             best_input_parameter_result.append(hype_parameter_result[i])
 
     array_da_hidden = []
-    for i in xrange(len(best_input_parameter_result)):
+    for i in range(len(best_input_parameter_result)):
         array_da_hidden.append(best_input_parameter_result[i].directional_accuracy)
 
     best_node_accuracy = np.max(array_da_hidden)
@@ -260,7 +261,7 @@ def find_best_lr(hype_parameter_result, best_input, best_hidden, lr_varians):
     average_lr_da_accuracy = []
     for i in lr_varians:
         array_da_lr = []
-        for j in xrange(len(hype_parameter_result)):
+        for j in range(len(hype_parameter_result)):
             if hype_parameter_result[j].lr == i:
                 array_da_lr.append(hype_parameter_result[j].directional_accuracy)
         average = np.average(array_da_lr)
