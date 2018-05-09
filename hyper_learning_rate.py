@@ -15,9 +15,9 @@ start_time = time.time()
 # Your statements here
 
 rate = []
-name = "idrusd"
+name = "idraud"
 fileName = "dataset/" + name + ".csv"
-kurs = "IDR/USD"
+kurs = "IDR/AUD"
 
 rate = open_file(fileName, kurs)
 
@@ -54,8 +54,8 @@ partition = 10
 for i in range(0, partition):
     lr_varians.append(min_lr + (max_lr * i / partition))
 
-lr_varians = [0.008,0.005, 0.003,0.01, 0.02, 0.03,0.1]
-lr_varians = []
+lr_varians = [0.008,0.005, 0.003,0.001, 0.02, 0.03,0.1,0.01,0.025,0.05]#
+#lr_varians = [0.01]#
 
 print (lr_varians)
 
@@ -63,23 +63,23 @@ rbm_iter = 100
 
 hype_parameter_result_lr = []
 
-myfile = open('learning_rate'+name+'.txt', 'w')
+myfile = open('learning_rate_adam_hyper'+name+'.txt', 'w')
 for learning_rate in lr_varians:
     for i in range(0, 1):
         np.random.seed(0)
-        trainRealX, trainRealY, validRealX, validRealY, testRealX, testRealY = split_data(rate, 4, split_size)
+        trainRealX, trainRealY, validRealX, validRealY, testRealX, testRealY = split_data(rate, 9, split_size)
         logXNormalizeTrain, logYNormalizeTrain, paramsTrain = normalize(trainRealX, trainRealY, None)
         logXNormalizeValid, logYNormalizeValid, params = normalize(testRealX, testRealY, paramsTrain)
         
             
         strX_train = ''
 
-        regressor = SupervisedDBNRegression(hidden_layers_structure=[4,16,8],
+        regressor = SupervisedDBNRegression(hidden_layers_structure=[4,10,12],
                                             learning_rate_rbm=learning_rate,
                                             learning_rate=learning_rate,
                                             n_epochs_rbm=rbm_iter,
                                             l2_regularization=0.0,
-                                            batch_size=5,
+                                            batch_size=10,
                                             n_iter_backprop=rbm_iter,
                                             activation_function='relu',
                                             train_optimization_algorithm='adam')
@@ -102,7 +102,7 @@ for learning_rate in lr_varians:
         mapeFunc = mape(np.array(testRealY), np.array(Y_pred), len(Y_pred))
         daFunc = da(testRealX, testRealY, Y_pred)
 
-        hype_parameter_result_lr.append(result([4], [4,16,8], rbm_iter, learning_rate, daFunc))
+        hype_parameter_result_lr.append(result([9], [4,10,12], rbm_iter, learning_rate, daFunc))
 
         print ("lr = " + str(learning_rate))
         print ('RMSE : %f ' % rmseFunc)
@@ -119,9 +119,9 @@ for learning_rate in lr_varians:
 myfile.close()
 #best_input, best_hidden
 best_input, best_hidden, best_lr, best_lr_accuracy, average_lr_da_accuracy, lr_varians = find_best_lr(
-    hype_parameter_result_lr, [4], [4,16,8], lr_varians)
+    hype_parameter_result_lr, [9], [4,10,12], lr_varians)
 
-myfile = open('best_parameter'+name+'.txt', 'w')
+myfile = open('best_parameter_adam'+name+'.txt', 'w')
 for i in hype_parameter_result_lr:
     print ("input node = " + str(i.input_node))
     print ("hidden_node = " + str(i.hidden_node))
@@ -158,13 +158,13 @@ myfile.close()
     
 
 
-plt.plot(regressor.train_loss)
-plt.plot(regressor.validation_loss)
-plt.title('model loss')
-plt.ylabel('loss')
-plt.xlabel('epoch')
-plt.legend(['train', 'validation'], loc='upper left')
-plt.show()
+#plt.plot(regressor.train_loss)
+#plt.plot(regressor.validation_loss)
+#plt.title('model loss')
+#plt.ylabel('loss')
+#plt.xlabel('epoch')
+#plt.legend(['train', 'validation'], loc='upper left')
+#plt.show()
 
 
 
