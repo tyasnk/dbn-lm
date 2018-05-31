@@ -20,21 +20,21 @@ start_time = time.time()
 # Your statements here
 
 rate = []
-name = "idraud"
+name = "idrsgd"
 fileName = "dataset/" + name + ".csv"
-kurs = "IDR/AUD"
+kurs = "IDR/SGD"
 
 rate = open_file(fileName, kurs)
 
 rbm_node_size_varian = []
 
-for i in [14,8,10,12,16,20]:
-    #for j in [4,8,10,12,16,20]:
-     #   for k in [4,8,10,12,16,20]:
-     #     for l in[8,16,24,32,40,48]:
-            rbm_node_size_varian.append([i])
+for i in [8]:
+    for j in [16]:
+       for k in [4,8,12,16,20,24]:
+          #for l in[4,8,12,16,20]:
+                rbm_node_size_varian.append([i,j,k])
 
-input_size_varian = [3,4,5,6,7]
+input_size_varian = [3]
 iteration_rbm = [100]
 string_output_varian = ''
 lr = [0.001]
@@ -51,7 +51,7 @@ class result:
         self.lr = lr
         self.directional_accuracy = directional_accuracy
 
-myfile = open('best_input_'+name+'.txt', 'w')
+myfile = open('best_input_baru_sgd_1_1_1_1_1_'+name+'.txt', 'w')
 for input_size in input_size_varian:
      for node_size in rbm_node_size_varian:
          for rbm_iter in iteration_rbm:
@@ -77,15 +77,15 @@ for input_size in input_size_varian:
 
              regressor = SupervisedDBNRegression(hidden_layers_structure=node_size,
                                                 optimization_algorithm='adam',
-                                                learning_rate_rbm=0.001,
-                                                learning_rate=0.001,
-                                                n_epochs_rbm=30,
-                                                n_iter_backprop=100,
+                                                learning_rate_rbm=lr[0],
+                                                learning_rate=lr[0],
+                                                n_epochs_rbm=rbm_iter,
+                                                n_iter_backprop=rbm_iter,
                                                 l2_regularization=0.0,
                                                 batch_size=10,
-                                                activation_function='relu',
-                                                dropout_p=0,
-                                                train_optimization_algorithm='adam')
+                                                activation_function='relu')
+                                                #dropout_p=0,
+                                                #train_optimization_algorithm='adam')
              
            #  regressor.fit(np.array(logXNormalizeTrain), np.array(logYNormalizeTrain))
              regressor.fit_and_validate(np.array(logXNormalizeTrain), np.array(logYNormalizeTrain), np.array(logXNormalizeValid), np.array(logYNormalizeValid))
